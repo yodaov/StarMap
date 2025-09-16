@@ -1,0 +1,113 @@
+{
+  "systems": [
+    {"name":"Sol","type":"Yellow Dwarf","owner":"Neutral","heatK":5778,"sizeRsun":1.0,
+      "planets":[
+        {"name":"Mercury","type":"Terrestrial","sizeEarth":0.38,"materials":["silicates","iron"],"fact":"scarps from cooling crust"},
+        {"name":"Venus","type":"Terrestrial","sizeEarth":0.95,"materials":["basalt","sulfuric acids"],"fact":"runaway greenhouse"},
+        {"name":"Earth","type":"Habitable","sizeEarth":1.0,"materials":["water","nitrogen","oxygen","silicates","iron"],"fact":"blooming with red flowers and green blobs"},
+        {"name":"Mars","type":"Desert","sizeEarth":0.53,"materials":["silica sand","iron oxides"],"fact":"global dust storms"},
+        {"name":"Jupiter","type":"Gas giant","sizeEarth":11.2,"materials":["hydrogen","helium","ammonia"],"fact":"great red spot"},
+        {"name":"Saturn","type":"Gas giant","sizeEarth":9.45,"materials":["hydrogen","helium","ice"],"fact":"broad ring system"},
+        {"name":"Uranus","type":"Ice giant","sizeEarth":4.01,"materials":["water ice","ammonia ice","methane"],"fact":"tilted on its side"},
+        {"name":"Neptune","type":"Ice giant","sizeEarth":3.88,"materials":["water ice","methane"],"fact":"supersonic winds"}
+      ]
+    },
+
+    {"name":"Alpha Orion","type":"Orange Dwarf","owner":"House Orion","heatK":4800,"sizeRsun":0.9,
+      "planets":[{"name":"Mira","type":"Habitable","sizeEarth":1.1,"materials":["water","oxygen","silicates","iron"],"fact":"sapphire seas with bioluminescent shores"}]},
+    {"name":"Luyten 726-8","type":"Binary System","owner":"Guild of Miners","heatK":3800,"sizeRsun":0.7,
+      "planets":[{"name":"Doria","type":"Ocean","sizeEarth":1.3,"materials":["liquid water","salts"],"fact":"megatsunami scars"}]},
+    {"name":"TON-618 Pair","type":"Binary Black holes","owner":"Unclaimed","sizeRsun":1000000,"planets":[]},
+    {"name":"Betelgeist","type":"Red Supergiant","owner":"House Orion","heatK":3500,"sizeRsun":900,"planets":[]},
+    {"name":"YZ Ceti","type":"Red Dwarf","owner":"Free Traders","heatK":3200,"sizeRsun":0.3,
+      "planets":[{"name":"Kaira","type":"Terrestrial","sizeEarth":0.8,"materials":["basalt","iron","nickel"],"fact":"auroras visible at equator"}]},
+    {"name":"PSR B1919+21","type":"Neutron Star","owner":"Forbidden Zone","planets":[]},
+    {"name":"Kepler-452","type":"Yellow Dwarf","owner":"Academy","heatK":5750,"sizeRsun":1.04,
+      "planets":[{"name":"452b","type":"Habitable","sizeEarth":1.2,"materials":["water","nitrogen","oxygen","silicates"],"fact":"algae spark at night"}]},
+
+    {"name":"HIP-91989","type":"Yellow Dwarf","owner":"Neutral","heatK":5600,"sizeRsun":1.02,
+      "planets":[
+        {"name":"Vestae","type":"Terrestrial","sizeEarth":0.7,"materials":["basalt","iron"],"fact":"polar auroras year‑round"},
+        {"name":"Pelion","type":"Desert","sizeEarth":1.1,"materials":["silica sand","sulfates"],"fact":"towering dust devils"},
+        {"name":"Ardan","type":"Habitable","sizeEarth":0.95,"materials":["water","nitrogen","oxygen","silicates","iron"],"fact":"orchards of crimson leaf‑trees"}
+      ]
+    },
+    {"name":"GL-581","type":"Red Dwarf","owner":"Neutral","heatK":3400,"sizeRsun":0.32,
+      "planets":[{"name":"Glaia","type":"Ocean","sizeEarth":1.6,"materials":["liquid water","salts","silicates"],"fact":"endless storms that glow"}]},
+    {"name":"WASP-17","type":"Yellow Dwarf","owner":"Academy","heatK":6000,"sizeRsun":1.2,
+      "planets":[{"name":"W17b","type":"Gas giant","sizeEarth":14.0,"materials":["hydrogen","helium","ammonia"],"fact":"retrograde orbit gusts"}]},
+
+    {"name":"HD-40307","type":"Orange Dwarf","owner":"Cartel Hegem","heatK":4950,"sizeRsun":0.75,
+      "planets":[
+        {"name":"Cynos","type":"Terrestrial","sizeEarth":1.3,"materials":["granite","iron","silicates"],"fact":"impact basins with glassy plains"},
+        {"name":"Demer","type":"Carbon","sizeEarth":1.1,"materials":["carbon","graphite","diamond"],"fact":"diamond crags along equator"}
+      ]
+    },
+    {"name":"TRAPPIST-1","type":"Red Dwarf","owner":"Pilgrims","heatK":2550,"sizeRsun":0.12,
+      "planets":[
+        {"name":"T1b","type":"Terrestrial","sizeEarth":1.1,"materials":["basalt","iron"],"fact":"resonant chain tides"},
+        {"name":"T1c","type":"Terrestrial","sizeEarth":1.0,"materials":["silicates","iron","nickel"],"fact":"nightside frost blooms"},
+        {"name":"T1d","type":"Habitable","sizeEarth":0.8,"materials":["water","oxygen","nitrogen","silicates"],"fact":"bioluminescent reefs"}
+      ]
+    },
+
+    {"name":"Gaia-223","type":"Yellow Dwarf","owner":"Neutral","heatK":5700,"sizeRsun":1.05,
+      "planets":[{"name":"Phoros","type":"Desert","sizeEarth":0.9,"materials":["silica sand","iron oxides"],"fact":"mirror‑like salt pans"}]},
+    {"name":"BD-12 578","type":"Red Dwarf","owner":"Frontier League","heatK":3100,"sizeRsun":0.28,
+      "planets":[{"name":"Zerra","type":"Lava","sizeEarth":0.7,"materials":["basaltic lava","sulfur"],"fact":"volcanic lightning webs"}]},
+    {"name":"HR-8921","type":"Blue Star","owner":"Navy","heatK":18000,"sizeRsun":2.1,"planets":[]},
+    {"name":"Kepler-62","type":"Orange Dwarf","owner":"Academy","heatK":4925,"sizeRsun":0.66,
+      "planets":[{"name":"62f","type":"Habitable","sizeEarth":1.4,"materials":["water","oxygen","silicates"],"fact":"glittering polar rings"}]},
+
+    {"name":"XK-3102","type":"Red Giant","owner":"Neutral","heatK":3800,"sizeRsun":24,"planets":[]},
+    {"name":"TRI-Delta","type":"Orange Dwarf","owner":"Merchants Guild","heatK":5100,"sizeRsun":0.9,
+      "planets":[{"name":"Aven","type":"Ocean","sizeEarth":1.9,"materials":["liquid water","salts"],"fact":"green tides from algae blooms"}]},
+    {"name":"HIP-72011","type":"Yellow Dwarf","owner":"Neutral","heatK":5650,"sizeRsun":0.98,
+      "planets":[{"name":"Volin","type":"Carbon","sizeEarth":1.2,"materials":["diamond","graphite","carbon"],"fact":"diamond hail during storms"}]},
+
+    {"name":"GL-725","type":"Red Dwarf","owner":"Free Traders","heatK":3200,"sizeRsun":0.35,
+      "planets":[{"name":"Rava","type":"Desert","sizeEarth":0.8,"materials":["silica sand","sulfates"],"fact":"singing dunes"}]},
+    {"name":"WASP-121","type":"Yellow Dwarf","owner":"Academy","heatK":6200,"sizeRsun":1.4,
+      "planets":[{"name":"121b","type":"Lava","sizeEarth":1.4,"materials":["basaltic lava","volatiles"],"fact":"rains molten glass on nightside"}]},
+    {"name":"HD-219134","type":"Orange Dwarf","owner":"Neutral","heatK":4800,"sizeRsun":0.78,
+      "planets":[{"name":"219k","type":"Terrestrial","sizeEarth":1.2,"materials":["iron","nickel","silicates"],"fact":"metallic meteor showers"}]},
+
+    {"name":"OGLE-TR-56","type":"Yellow Dwarf","owner":"Academy","heatK":5900,"sizeRsun":1.1,
+      "planets":[{"name":"56b","type":"Gas giant","sizeEarth":15.0,"materials":["hydrogen","helium"],"fact":"day‑side vapor streams"}]},
+    {"name":"Kepler-22","type":"Yellow Dwarf","owner":"Pilgrims","heatK":5518,"sizeRsun":0.98,
+      "planets":[{"name":"22b","type":"Ocean","sizeEarth":2.3,"materials":["liquid water","salts"],"fact":"endless archipelagos"}]},
+    {"name":"TRAPPIST-2","type":"Red Dwarf","owner":"Pilgrims","heatK":2600,"sizeRsun":0.14,
+      "planets":[{"name":"T2a","type":"Habitable","sizeEarth":0.9,"materials":["water","oxygen","silicates"],"fact":"floating fungal forests"}]},
+
+    {"name":"HR-10001","type":"Blue Star","owner":"Navy","heatK":24000,"sizeRsun":3.0,"planets":[]},
+    {"name":"SDSS-Black","type":"Black Hole","owner":"Forbidden Zone","sizeRsun":8000,"planets":[]},
+    {"name":"GL-176","type":"Red Dwarf","owner":"Frontier League","heatK":3300,"sizeRsun":0.45,
+      "planets":[{"name":"Iona","type":"Habitable","sizeEarth":0.95,"materials":["water","oxygen","nitrogen","silicates"],"fact":"bioluminescent marshes"}]},
+
+    {"name":"HR-7007","type":"Red Giant","owner":"Neutral","heatK":3600,"sizeRsun":30,"planets":[]},
+    {"name":"Kepler-186","type":"Red Dwarf","owner":"Academy","heatK":3750,"sizeRsun":0.47,
+      "planets":[{"name":"186f","type":"Habitable","sizeEarth":1.1,"materials":["water","oxygen","silicates"],"fact":"red‑tinged daylight"}]},
+    {"name":"XK-Atlas","type":"Orange Dwarf","owner":"Merchants Guild","heatK":5100,"sizeRsun":0.85,
+      "planets":[{"name":"Dova","type":"Desert","sizeEarth":1.0,"materials":["silica sand","iron oxides","sulfates"],"fact":"fossil dune ridges"}]},
+
+    {"name":"HIP-33221","type":"Yellow Dwarf","owner":"Neutral","heatK":5750,"sizeRsun":1.1,
+      "planets":[{"name":"Hesper","type":"Terrestrial","sizeEarth":1.4,"materials":["granite","iron","nickel"],"fact":"sky of persistent meteors"}]},
+    {"name":"OGLE-TR-113","type":"Yellow Dwarf","owner":"Academy","heatK":5800,"sizeRsun":1.0,
+      "planets":[{"name":"113b","type":"Gas giant","sizeEarth":13.5,"materials":["hydrogen","helium","ammonia"],"fact":"faint dusty rings"}]},
+    {"name":"BD-04 123","type":"Red Dwarf","owner":"Free Traders","heatK":3000,"sizeRsun":0.25,
+      "planets":[{"name":"Kael","type":"Lava","sizeEarth":0.9,"materials":["basaltic lava","sulfur"],"fact":"lava rainbows in plume"}]},
+
+    {"name":"GL-667","type":"Red Dwarf","owner":"Neutral","heatK":3400,"sizeRsun":0.42,
+      "planets":[{"name":"667c","type":"Habitable","sizeEarth":1.2,"materials":["water","oxygen","silicates","iron"],"fact":"tidal archipelagos"}]},
+    {"name":"HR-999","type":"Red Giant","owner":"Neutral","heatK":3700,"sizeRsun":50,"planets":[]},
+    {"name":"Kepler-7","type":"Yellow Dwarf","owner":"Academy","heatK":5930,"sizeRsun":1.3,
+      "planets":[{"name":"7b","type":"Gas giant","sizeEarth":15.3,"materials":["hydrogen","helium"],"fact":"high‑albedo clouds"}]},
+
+    {"name":"GL-876","type":"Red Dwarf","owner":"Frontier League","heatK":3200,"sizeRsun":0.36,
+      "planets":[{"name":"876d","type":"Ocean","sizeEarth":1.5,"materials":["water","salts"],"fact":"storms create luminous waves"}]},
+    {"name":"HIP-7785","type":"Orange Dwarf","owner":"Merchants Guild","heatK":5000,"sizeRsun":0.82,
+      "planets":[{"name":"Rysa","type":"Carbon","sizeEarth":1.3,"materials":["diamond","graphite","carbon"],"fact":"diamond dunes gleam at dusk"}]},
+    {"name":"Gaia-447","type":"Yellow Dwarf","owner":"Neutral","heatK":5650,"sizeRsun":0.96,
+      "planets":[{"name":"Orren","type":"Terrestrial","sizeEarth":1.0,"materials":["silicates","iron"],"fact":"ring of impact craters"}]}
+  ]
+}
