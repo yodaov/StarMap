@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Galaxy Lobby (RPG)</title>
+  <style>
+    :root{ --bg:#05060a; --panel:#0c0f16; --panel-2:#0a0d13; --text:#e8f0ff; --muted:#98a2b3; }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial; color:var(--text);
+      background:radial-gradient(1200px 800px at 60% -10%, #0e1627 0%, var(--bg) 55%), radial-gradient(800px 600px at 20% 120%, #0b1222 0%, #05060a 60%);
+      overflow:hidden;}
+
+    .app{display:grid; grid-template-columns: 1fr 380px; grid-template-rows: 56px 1fr; grid-template-areas:"top top" "map side"; height:100%}
+    .topbar{grid-area:top; display:flex; align-items:center; gap:12px; padding:10px 14px; background:linear-gradient(to bottom, rgba(9,11,17,.6), rgba(9,11,17,.2)); border-bottom:1px solid #101726}
+    .logo{font-weight:700}
+    .topbar .small{margin-left:auto; color:var(--muted); font-size:12px}
+
+    .map{grid-area:map; position:relative; overflow:hidden}
+    #space{position:absolute; inset:0}
+
+    .sidebar{grid-area:side; overflow:auto; background:linear-gradient(180deg, var(--panel), var(--panel-2)); border-left:1px solid #0f1726}
+    .sidebar h2{margin:14px; margin-bottom:8px; font-size:16px}
+    .search{padding:0 14px 10px}
+    .search input{width:100%; padding:10px 12px; border-radius:10px; background:#0a1220; color:var(--text); border:1px solid #1a2540}
+    .list{padding:6px 10px 40px; display:flex; flex-direction:column; gap:8px}
+    .card{border:1px solid #152037; background:#0b121f; border-radius:12px; padding:10px}
+    .card .name{font-weight:700}
+    .kv{display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-top:6px; font-size:12px; color:var(--muted)}
+    .pill{display:inline-flex; align-items:center; gap:6px; padding:4px 8px; background:#0b1730; border:1px solid #1e2b49; border-radius:999px; font-size:12px}
+    .planets{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
+
+    .star{position:absolute; border-radius:50%; cursor:pointer; box-shadow:0 0 8px rgba(160,190,255,.35), 0 0 2px rgba(255,255,255,.8) inset; display:flex; align-items:center; justify-content:center}
+    .star:hover{outline:1px solid rgba(120,160,255,.5)}
+    .tooltip{position:absolute; z-index:20; transform:translate(-50%, calc(-100% - 12px)); background:#0a1120; color:var(--text); padding:8px 10px; border:1px solid #1f2f52; border-radius:8px; white-space:nowrap; font-size:12px; pointer-events:none; opacity:0; transition:opacity .12s}
+    .star:hover .tooltip{opacity:1}
+
+    .system{position:absolute; inset:0; display:none; place-items:center}
+    .sys-wrap{position:relative; width:min(1400px,96vw); height:min(780px,78vh); border:1px solid #13203a; background:radial-gradient(1000px 800px at 50% 40%, #0b1223, #060910); border-radius:18px; overflow:hidden; box-shadow:0 10px 50px rgba(0,0,0,.5)}
+    .sys-top{position:absolute; inset:0 0 auto 0; display:flex; gap:10px; align-items:center; padding:10px 12px; background:linear-gradient(to bottom, rgba(8,12,22,.7), rgba(8,12,22,0)); border-bottom:1px solid #0e1a30; z-index:5}
+    .sys-title{font-weight:700}
+    .scene{position:absolute; inset:0}
+
+    .orbit{position:absolute; border:1px dashed rgba(120,160,255,.25); border-radius:50%; left:50%; top:50%; transform:translate(-50%,-50%)}
+    .body{position:absolute; border-radius:50%; box-shadow:0 0 10px rgba(180,200,255,.4)}
+    .body .tooltip{transform:translate(-50%, calc(-100% - 14px))}
+    .body:hover .tooltip{opacity:1}
+
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:12px}
+    .small{font-size:12px; color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="logo">✨ Galaxy Lobby (RPG)</div>
+      <div class="small">Data‑driven · Edit <code>systems.json</code> to change ownership & details</div>
+    </div>
+
+    <div class="map">
+      <div id="space"></div>
+      <div class="system" id="systemView" aria-hidden="true">
+        <div class="sys-wrap">
+          <div class="sys-top">
+            <div class="sys-title" id="sysTitle">System</div>
+          </div>
+          <div class="scene" id="scene"></div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="sidebar">
+      <h2>Systems</h2>
+      <div class="search"><input id="search" placeholder="Search by name, type, owner…" /></div>
+      <div id="list" class="list"></div>
+    </aside>
+  </div>
+
+  <script>
+  // -------- Load systems.json (fallback to embedded sample) --------
+  async function loadData(){
+    try{
+      const res = await fetch('systems.json', {cache:'no-store'});
+      if(!res.ok) throw new Error('no external file');
+      return await res.json();
+    }catch(e){
+      const embedded = document.getElementById('embedded-data').textContent;
+      return JSON.parse(embedded);
+    }
+  }
+
+  // -------- Elements --------
+  const space   = document.getElementById('space');
+  const list    = document.getElementById('list');
+  const search  = document.getElementById('search');
+  const scene   = document.getElementById('scene');
+  const systemV = document.getElementById('systemView');
+  const sysTitle= document.getElementById('sysTitle');
+
+  let DATA = { systems: [] };
+
+  // -------- Helpers --------
+  function starColor(type){
+    const t = (type||'').toLowerCase();
+    if(t.includes('black hole')) return 'radial-gradient(circle at 40% 40%, #1a2233, #020308 70%)';
+    if(t.includes('neutron'))   return 'radial-gradient(circle at 40% 40%, #b7d0ff, #587fff)';
+    if(t.includes('white dwarf'))return 'radial-gradient(circle at 40% 40%, #f8fbff, #a9c0ff)';
+    if(t.includes('blue'))      return 'radial-gradient(circle at 40% 40%, #bcd6ff, #3a66ff)';
+    if(t.includes('yellow'))    return 'radial-gradient(circle at 40% 40%, #fff2b0, #e0a91a)';
+    if(t.includes('orange'))    return 'radial-gradient(circle at 40% 40%, #ffd9a6, #ff8d2a)';
+    if(t.includes('giant'))     return 'radial-gradient(circle at 40% 40%, #ffd1c0, #ff4b2f)';
+    return 'radial-gradient(circle at 40% 40%, #ffd5d5, #ff7a5e)';
+  }
+
+  function planetColor(type){
+    switch((type||'').toLowerCase()){
+      case 'gas giant': return 'radial-gradient(circle at 40% 35%, #f0f5ff, #4a6fd1)';
+      case 'ice giant': return 'radial-gradient(circle at 40% 35%, #e8fbff, #5db7e8)';
+      case 'ocean':     return 'radial-gradient(circle at 40% 35%, #cbe8ff, #0577bd)';
+      case 'desert':    return 'radial-gradient(circle at 40% 35%, #ffecc7, #d9a24a)';
+      case 'lava':      return 'radial-gradient(circle at 40% 35%, #ffd4b3, #ff3b1a)';
+      case 'carbon':    return 'radial-gradient(circle at 40% 35%, #cdd3da, #2b2f36)';
+      case 'habitable': return 'radial-gradient(circle at 40% 35%, #e7ffe6, #2a7f3b)';
+      default:          return 'radial-gradient(circle at 40% 35%, #f0f0f0, #6f6f6f)';
+    }
+  }
+
+  // Deterministic spaced layout for any systems without x,y
+  function layoutSystems(systems){
+    const W = space.clientWidth, H = space.clientHeight, CX=W/2, CY=H/2;
+    const used = [];
+    const MIN_DIST = 48, VOID_BH = 90;
+    function hashStr(s){let h=2166136261>>>0; for(let i=0;i<s.length;i++){h^=s.charCodeAt(i); h=Math.imul(h,16777619)} return h>>>0}
+    function r01(h){h=Math.imul(h^(h>>>16),0x45d9f3b); h=Math.imul(h^(h>>>16),0x45d9f3b); h^=h>>>16; return (h>>>0)/4294967295}
+    const voidFor = o => (String(o.type||'').toLowerCase().includes('black hole')||String(o.type||'').toLowerCase().includes('neutron'))?VOID_BH:MIN_DIST;
+
+    systems.forEach(s=>{
+      if(typeof s.x==='number' && typeof s.y==='number') return;
+      const base = hashStr((s.name||'')+'|'+(s.type||'')+'|'+(s.owner||''));
+      let ang = r01(base)*Math.PI*2; let rad = Math.pow(r01(base^0x9e3779b9), 0.6) * Math.min(W,H)*0.45;
+      if((s.type||'').toLowerCase().includes('binary black')) rad = Math.max(rad, Math.min(W,H)*0.36);
+      let x = CX + rad*Math.cos(ang), y = CY + rad*Math.sin(ang), tries=0;
+      while(tries++<600){
+        let ok = x>24 && x<W-24 && y>24 && y<H-24;
+        for(const p of used){ const d=Math.hypot(x-p.x,y-p.y); if(d<Math.max(voidFor(s),voidFor(p))) { ok=false; break; } }
+        if(ok) break; ang+=0.35; rad+=2.5; x=CX+rad*Math.cos(ang); y=CY+rad*Math.sin(ang);
+      }
+      s.x=Math.round(x); s.y=Math.round(y); used.push({x:s.x,y:s.y,type:s.type});
+    });
+  }
+
+  // -------- Lobby rendering --------
+  function renderLobby(){
+    space.innerHTML=''; list.innerHTML='';
+    layoutSystems(DATA.systems);
+
+    DATA.systems.forEach((sys,i)=>{
+      // dot
+      const dot = document.createElement('div'); dot.className='star';
+      const px = Math.max(5, Math.min(10 + Math.log(2+(sys.sizeRsun||1))*6, 18));
+      dot.style.left=sys.x+'px'; dot.style.top=sys.y+'px'; dot.style.width=dot.style.height=(px*2)+'px'; dot.style.background=starColor(sys.type);
+      const tip=document.createElement('div'); tip.className='tooltip'; tip.textContent = `${sys.name} · ${sys.type}`; dot.appendChild(tip);
+      dot.addEventListener('click',()=> openSystem(i));
+      space.appendChild(dot);
+
+      // list
+      const card=document.createElement('div'); card.className='card';
+      card.dataset.name=(sys.name||'').toLowerCase(); card.dataset.type=(sys.type||'').toLowerCase(); card.dataset.owner=(sys.owner||'').toLowerCase();
+      card.innerHTML=`
+        <div class="name">${sys.name}</div>
+        <div class="kv">
+          <div><span class="small">Type</span><div>${sys.type}</div></div>
+          <div><span class="small">Owner</span><div>${sys.owner||'—'}</div></div>
+          <div><span class="small">Heat (K)</span><div class="mono">${sys.heatK ?? '—'}</div></div>
+          <div><span class="small">Size (R☉)</span><div class="mono">${sys.sizeRsun ?? '—'}</div></div>
+          <div><span class="small">Planets</span><div>${(sys.planets||[]).length}</div></div>
+        </div>
+        <div class="planets">${(sys.planets||[]).map(p=>`<span class="pill" title="${(p.materials||[]).join(', ')}">${p.name} · ${p.type}</span>`).join('')}</div>
+        <div style="margin-top:8px"><button class="pill" data-open="${i}">Open system</button></div>`;
+      card.querySelector('button').addEventListener('click',()=> openSystem(i));
+      list.appendChild(card);
+    });
+  }
+
+  // -------- System view --------
+  function openSystem(idx){ location.hash = `#system-${idx}`; }
+  function closeSystem(){ location.hash = ''; }
+  window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSystem(); });
+
+  function renderSystem(idx){
+    const sys = DATA.systems[idx]; if(!sys) return;
+    sysTitle.textContent = `${sys.name} — ${sys.type}`;
+    systemV.style.display='grid'; systemV.setAttribute('aria-hidden','false');
+    scene.innerHTML='';
+
+    const W = document.querySelector('.sys-wrap').clientWidth;
+    const H = document.querySelector('.sys-wrap').clientHeight;
+    const cx=W/2, cy=H/2 + 10;
+
+    function starPx(rs){ const px=18*Math.log10(2+(rs||1)); return Math.max(8, Math.min(px, 180)); }
+    function putBody(x,y,r,color,label){
+      const b=document.createElement('div'); b.className='body'; b.style.left=(x-r)+'px'; b.style.top=(y-r)+'px'; b.style.width=b.style.height=(r*2)+'px'; b.style.background=color; b.style.border='1px solid rgba(255,255,255,.12)'; b.style.zIndex=2;
+      const tip=document.createElement('div'); tip.className='tooltip'; tip.innerHTML=label; b.appendChild(tip); scene.appendChild(b);
+    }
+
+    const t=(sys.type||'').toLowerCase();
+    if(t.includes('binary system')){
+      const r1=starPx(sys.sizeRsun||1), r2=starPx(Math.max(0.3,(sys.sizeRsun||1)*0.9));
+      putBody(cx-60,cy,r1,starColor('Yellow Dwarf'),`${sys.name} A<br><span class='small'>Type: Binary System<br>Heat: ${sys.heatK ?? '—'} K<br>Size: ${sys.sizeRsun ?? '—'} R☉</span>`);
+      putBody(cx+60,cy,r2,starColor('Orange Dwarf'),`${sys.name} B<br><span class='small'>Type: Binary System</span>`);
+    }else if(t.includes('binary black holes')){
+      const rA=starPx(Math.max(5,Math.cbrt(sys.sizeRsun||30))), rB=starPx(Math.max(4,Math.cbrt((sys.sizeRsun||20)*0.7)));
+      putBody(cx-70,cy,rA,starColor('Black hole'),`${sys.name} A<br><span class='small'>Type: Binary Black holes</span>`);
+      putBody(cx+70,cy,rB,starColor('Black hole'),`${sys.name} B<br><span class='small'>Type: Binary Black holes</span>`);
+    } else {
+      const r=starPx(sys.sizeRsun||1);
+      putBody(cx,cy,r,starColor(sys.type||''),`${sys.name}<br><span class='small'>Type: ${sys.type}<br>Heat: ${sys.heatK ?? '—'} K<br>Size: ${sys.sizeRsun ?? '—'} R☉</span>`);
+    }
+
+    const planets = sys.planets||[]; let baseOrbit=120; const orbitGap=32;
+    planets.forEach((p,i)=>{
+      const a = baseOrbit + i*orbitGap;
+      const orbit=document.createElement('div'); orbit.className='orbit'; orbit.style.width=orbit.style.height=(a*2)+'px'; scene.appendChild(orbit);
+      const pr = Math.max(4, Math.min(6*(p.sizeEarth||1), 22));
+      const wrapper=document.createElement('div'); wrapper.style.position='absolute'; wrapper.style.left=(cx-a)+'px'; wrapper.style.top=(cy-a)+'px'; wrapper.style.width=wrapper.style.height=(a*2)+'px'; wrapper.style.borderRadius='50%'; wrapper.style.zIndex=2;
+      const planet=document.createElement('div'); planet.className='body'; planet.style.width=planet.style.height=(pr*2)+'px'; planet.style.background=planetColor(p.type||''); planet.style.left=(2*a - pr*2)+'px'; planet.style.top=(a - pr)+'px'; planet.style.border='1px solid rgba(255,255,255,.08)'; planet.style.boxShadow='0 0 10px rgba(150,200,255,.25)';
+      const tip=document.createElement('div'); tip.className='tooltip'; tip.innerHTML=`${p.name}<br><span class='small'>${p.type}; size ${(p.sizeEarth??'—')} ⊕<br>Materials: ${(p.materials||[]).join(', ')}<br>Fact: ${p.fact||'—'}</span>`; planet.appendChild(tip);
+      wrapper.appendChild(planet); scene.appendChild(wrapper);
+      wrapper.animate([{transform:'rotate(0deg)'},{transform:'rotate(360deg)'}],{duration:(18000+i*2000),iterations:Infinity,easing:'linear'});
+    });
+  }
+
+  // Routing
+  window.addEventListener('hashchange',()=>{
+    const m = location.hash.match(/#system-(\d+)/);
+    if(m){ renderSystem(+m[1]); }
+    systemV.style.display = m? 'grid':'none';
+    systemV.setAttribute('aria-hidden', m? 'false':'true');
+  });
+
+  // Search
+  search.addEventListener('input',()=>{
+    const q = search.value.trim().toLowerCase();
+    Array.from(list.children).forEach(card=>{
+      const hit = card.dataset.name.includes(q) || card.dataset.type.includes(q) || card.dataset.owner.includes(q);
+      card.style.display = hit ? 'block' : 'none';
+    });
+  });
+
+  // Boot
+  (async function(){ DATA = await loadData(); if(!Array.isArray(DATA.systems)) DATA.systems=[]; renderLobby(); })();
+  </script>
+
+  <!-- Embedded sample so the page works even before you add systems.json -->
+  <script id="embedded-data" type="application/json">{
+    "systems": [
+      { "name": "Sol", "type": "Yellow Dwarf", "owner": "Neutral", "heatK": 5778, "sizeRsun": 1.0,
+        "planets": [
+          {"name":"Earth","type":"Habitable","sizeEarth":1.0,"materials":["water","nitrogen","oxygen","silicates","iron"],"fact":"blooming with red flowers and green blobs"},
+          {"name":"Jupiter","type":"Gas giant","sizeEarth":11.2,"materials":["hydrogen","helium","ammonia"],"fact":"great red spot"}
+        ]
+      },
+      { "name": "Luyten 726-8", "type": "Binary System", "owner": "Guild of Miners", "heatK": 3800, "sizeRsun": 0.7,
+        "planets": [{"name":"Doria","type":"Ocean","sizeEarth":1.3,"materials":["liquid water","salts"],"fact":"megatsunami scars"}]},
+      { "name": "TON-618 Pair", "type": "Binary Black holes", "owner": "Unclaimed", "sizeRsun": 1000000, "planets": [] },
+      { "name": "Betelgeist", "type": "Red Supergiant", "owner": "House Orion", "heatK": 3500, "sizeRsun": 900, "planets": [] },
+      { "name": "YZ Ceti", "type": "Red Dwarf", "owner": "Free Traders", "heatK": 3200, "sizeRsun": 0.3,
+        "planets": [{"name":"Kaira","type":"Terrestrial","sizeEarth":0.8,"materials":["basalt","iron","nickel"],"fact":"auroras visible at equator"}]},
+      { "name": "PSR B1919+21", "type": "Neutron Star", "owner": "Forbidden Zone", "planets": [] },
+      { "name": "Kepler-452", "type": "Yellow Dwarf", "owner": "Academy", "heatK": 5750, "sizeRsun": 1.04,
+        "planets": [{"name":"452b","type":"Habitable","sizeEarth":1.2,"materials":["water","nitrogen","oxygen","silicates"],"fact":"algae spark at night"}]}
+    ]
+  }</script>
+</body>
+</html>
