@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Galaxy Lobby (RPG Data)</title>
+  <style>
+    body{margin:0;font-family:sans-serif;background:#05060a;color:#e8f0ff;overflow:hidden}
+    .app{display:grid;grid-template-columns:1fr 360px;grid-template-rows:56px 1fr;grid-template-areas:"top top" "map side";height:100%}
+    .topbar{grid-area:top;display:flex;align-items:center;gap:12px;padding:10px 14px;background:#0c0f16;border-bottom:1px solid #101726}
+    .logo{font-weight:700}
+
+    .map{grid-area:map;position:relative;overflow:hidden}
+    #space{position:absolute;inset:0}
+
+    .sidebar{grid-area:side;overflow:auto;background:#0a0d13;border-left:1px solid #0f1726}
+    .sidebar h2{margin:14px;font-size:16px}
+    .list{padding:6px 10px 40px;display:flex;flex-direction:column;gap:8px}
+    .card{border:1px solid #152037;background:#0b121f;border-radius:12px;padding:10px}
+    .card .name{font-weight:700}
+
+    /* Lobby stars */
+    .star{position:absolute;border-radius:50%;cursor:pointer;box-shadow:0 0 8px rgba(160,190,255,.35),inset 0 0 2px #fff}
+    .tooltip{position:absolute;z-index:20;transform:translate(-50%,-120%);background:#0a1120;padding:6px 8px;border-radius:8px;font-size:12px;white-space:nowrap;opacity:0;transition:opacity .15s;border:1px solid #1d2a45}
+    .star:hover .tooltip{opacity:1}
+
+    /* System view */
+    .system{position:absolute;inset:0;display:none;place-items:center;background:rgba(0,0,0,.75)}
+    .sys-wrap{position:relative;width:min(1400px,92vw);height:min(800px,82vh);background:#060910;border:1px solid #13203a;border-radius:14px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+    .sys-top{position:absolute;inset:0 0 auto 0;display:flex;align-items:center;gap:10px;padding:10px 12px;background:linear-gradient(to bottom, rgba(8,12,22,.7), rgba(8,12,22,0));border-bottom:1px solid #0e1a30;z-index:50}
+    .sys-title{font-weight:700}
+    .sys-close{margin-left:auto;background:#0d1628;color:#e8f0ff;border:1px solid #2a3a5f;border-radius:8px;padding:6px 10px;cursor:pointer}
+
+    .scene{position:absolute;inset:0;pointer-events:none} /* bodies re-enable pointer events */
+    .orbit{position:absolute;border:1px dashed rgba(120,160,255,.25);border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none}
+    .body{position:absolute;border-radius:50%;box-shadow:0 0 10px rgba(180,200,255,.35);pointer-events:auto}
+    .body .tooltip{transform:translate(-50%,-120%)}
+    .body:hover .tooltip{opacity:1}
+    .star-body{z-index:5}
+    .planet-body{z-index:6}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar"><div class="logo">✨ Galaxy Lobby</div></div>
+
+    <div class="map">
+      <div id="space"></div>
+
+      <div class="system" id="systemView" aria-hidden="true">
+        <div class="sys-wrap">
+          <div class="sys-top">
+            <div class="sys-title" id="sysTitle">System</div>
+            <button class="sys-close" onclick="closeSystem()">Back</button>
+          </div>
+          <div class="scene" id="scene"></div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="sidebar">
+      <h2>Systems</h2>
+      <div id="list" class="list"></div>
+    </aside>
+  </div>
+
+  <script>
+  // -------- Load systems.json (fallback to embedded) --------
+  async function loadData(){
+    try{ const res=await fetch('systems.json',{cache:'no-store'}); if(!res.ok) throw 0; return await res.json(); }
+    catch{ return JSON.parse(document.getElementById('embedded-data').textContent); }
+  }
+
+  let DATA={systems:[]};
+  const space=document.getElementById('space');
+  const list=document.getElementById('list');
+  const systemView=document.getElementById('systemView');
+  const scene=document.getElementById('scene');
+  const sysTitle=document.getElementById('sysTitle');
+
+  function starColor(t){ t=(t||'').toLowerCase();
+    if(t.includes('black hole'))return '#111';
+    if(t.includes('neutron'))return '#7af';
+    if(t.includes('white dwarf'))return '#cdf';
+    if(t.includes('blue'))return '#48f';
+    if(t.includes('yellow'))return '#fc3';
+    if(t.includes('orange'))return '#f93';
+    if(t.includes('giant'))return '#f66';
+    return '#f88';
+  }
+
+  function renderLobby(){
+    space.innerHTML=''; list.innerHTML='';
+    DATA.systems.forEach((s,i)=>{
+      const dot=document.createElement('div'); dot.className='star';
+      dot.style.left=(s.x||Math.random()*space.clientWidth)+'px';
+      dot.style.top =(s.y||Math.random()*space.clientHeight)+'px';
+      dot.style.width=dot.style.height='12px';
+      dot.style.background=starColor(s.type);
+      const tip=document.createElement('div'); tip.className='tooltip'; tip.textContent=`${s.name} (${s.type})`; dot.appendChild(tip);
+      dot.onclick=()=>openSystem(i);
+      space.appendChild(dot);
+
+      const card=document.createElement('div'); card.className='card';
+      card.innerHTML=`<div class="name">${s.name}</div>
+        <div>Type: ${s.type}</div>
+        <div>Heat: ${s.heatK ?? '—'}</div>
+        <div>Size: ${s.sizeRsun ?? '—'} R☉</div>
+        <div>Planets: ${(s.planets||[]).length}</div>`;
+      list.appendChild(card);
+    });
+  }
+
+  // -------- System view --------
+  function starPx(rs){ const px = 28 * Math.log10(2 + (rs||1)); return Math.max(16, Math.min(px, 240)); }
+
+  function openSystem(i){
+    const s=DATA.systems[i]; if(!s) return;
+    scene.innerHTML=''; systemView.style.display='grid'; systemView.setAttribute('aria-hidden','false');
+
+    const wrap=document.querySelector('.sys-wrap');
+    const W=wrap.clientWidth, H=wrap.clientHeight; const cx=W/2, cy=H/2;
+
+    // Star (bigger scaling)
+    const sr = starPx(s.sizeRsun||1);
+    const star=document.createElement('div'); star.className='body star-body';
+    star.style.left=(cx-sr)+'px'; star.style.top=(cy-sr)+'px'; star.style.width=star.style.height=(sr*2)+'px'; star.style.background=starColor(s.type);
+    const stTip=document.createElement('div'); stTip.className='tooltip'; stTip.innerHTML=`${s.name}<br>${s.type}<br>${s.sizeRsun ?? '—'} R☉${s.heatK?'<br>'+s.heatK+' K':''}`; star.appendChild(stTip);
+    scene.appendChild(star);
+
+    // Orbits & planets (smaller planets, wider spacing)
+    const planets=s.planets||[];
+    let baseOrbit = Math.max(sr + 60, 160);
+    const orbitGap = 40;
+
+    planets.forEach((p,j)=>{
+      const a = baseOrbit + j*orbitGap;
+      const orbit=document.createElement('div'); orbit.className='orbit'; orbit.style.width=orbit.style.height=(a*2)+'px'; scene.appendChild(orbit);
+
+      const pr = Math.max(3, Math.min(4*((p.sizeEarth)||1), 16));
+      const planet=document.createElement('div'); planet.className='body planet-body';
+      planet.style.width=planet.style.height=(pr*2)+'px'; planet.style.left=(cx + a - pr)+'px'; planet.style.top=(cy - pr)+'px';
+      planet.style.background='#6cf';
+      const tip=document.createElement('div'); tip.className='tooltip'; tip.innerHTML=`${p.name}<br>${p.type}<br>Size: ${(p.sizeEarth??'—')} ⊕<br>Materials: ${(p.materials||[]).join(', ')}<br>${p.fact||''}`; planet.appendChild(tip);
+      scene.appendChild(planet);
+    });
+  }
+  function closeSystem(){ systemView.style.display='none'; systemView.setAttribute('aria-hidden','true'); }
+
+  (async()=>{ DATA=await loadData(); renderLobby(); })();
+  </script>
+
+  <!-- Embedded tiny sample so the page works even without systems.json -->
+  <script id="embedded-data" type="application/json">{
+    "systems":[
+      {"name":"Sun","type":"Yellow Dwarf","heatK":5778,"sizeRsun":1,"x":200,"y":200,
+        "planets":[{"name":"Mercury","type":"Terrestrial","sizeEarth":0.38,"materials":["silicates","iron"],"fact":"scarps from cooling crust"},{"name":"Venus","type":"Terrestrial","sizeEarth":0.95,"materials":["basalt","sulfuric acids"],"fact":"runaway greenhouse"},{"name":"Earth","type":"Habitable","sizeEarth":1.0,"materials":["water","nitrogen","oxygen","silicates","iron"],"fact":"blooming with red flowers and green blobs"}]},
+      {"name":"TON-618 Pair","type":"Binary Black holes","sizeRsun":1000000,"x":500,"y":400,"planets":[]}
+    ]
+  }</script>
+</body>
+</html>
