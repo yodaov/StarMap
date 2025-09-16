@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Galaxy Lobby</title>
+  <style>
+    :root{
+      --bg:#05060a;
+      --panel:#0c0f16;
+      --panel-2:#0a0d13;
+      --text:#e8f0ff;
+      --muted:#98a2b3;
+      --accent:#6ea8ff;
+      --ring:#26324a;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial; color:var(--text);
+      background:radial-gradient(1200px 800px at 60% -10%, #0e1627 0%, var(--bg) 55%),
+                 radial-gradient(800px 600px at 20% 120%, #0b1222 0%, #05060a 60%);
+      overflow:hidden;
+    }
+    a{color:inherit}
+
+    /* Layout */
+    .app{display:grid; grid-template-columns: 1fr 360px; grid-template-rows: 56px 1fr; grid-template-areas:
+        "top top"
+        "map side"; height:100%;}
+    .topbar{grid-area:top; display:flex; align-items:center; gap:12px; padding:10px 14px; backdrop-filter: blur(6px);
+      background:linear-gradient(to bottom, rgba(9,11,17,.6), rgba(9,11,17,.2)); border-bottom:1px solid #101726;}
+    .logo{font-weight:700; letter-spacing:.3px}
+    .seed{margin-left:auto; display:flex; gap:8px; align-items:center; color:var(--muted); font-size:13px;}
+    .seed input{width:120px; background:#0d1422; color:var(--text); border:1px solid #1b2841; border-radius:8px; padding:6px 8px}
+    .btn{border:1px solid #2a3a5f; background:#0d1628; color:var(--text); padding:6px 10px; border-radius:8px; cursor:pointer}
+    .btn:hover{background:#10203b}
+
+    .map{grid-area:map; position:relative; overflow:hidden}
+    #space{position:absolute; inset:0;}
+
+    .sidebar{grid-area:side; overflow:auto; background:linear-gradient(180deg, var(--panel), var(--panel-2)); border-left:1px solid #0f1726}
+    .sidebar h2{margin:14px; margin-bottom:8px; font-size:16px; font-weight:700}
+    .search{padding:0 14px 10px}
+    .search input{width:100%; padding:10px 12px; border-radius:10px; background:#0a1220; color:var(--text); border:1px solid #1a2540}
+    .list{padding:6px 10px 40px; display:flex; flex-direction:column; gap:8px}
+    .card{border:1px solid #152037; background:#0b121f; border-radius:12px; padding:10px}
+    .card .name{font-weight:700}
+    .kv{display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-top:6px; font-size:12px; color:var(--muted)}
+    .pill{display:inline-flex; align-items:center; gap:6px; padding:4px 8px; background:#0b1730; border:1px solid #1e2b49; border-radius:999px; font-size:12px}
+    .planets{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
+
+    /* Star dots on lobby */
+    .star{position:absolute; border-radius:50%; cursor:pointer; box-shadow:0 0 8px rgba(160,190,255,.35), 0 0 2px rgba(255,255,255,.8) inset; display:flex; align-items:center; justify-content:center}
+    .star:hover{outline:1px solid rgba(120,160,255,.5)}
+    .tooltip{position:absolute; transform:translate(-50%, calc(-100% - 12px)); background:#0a1120; color:var(--text); padding:8px 10px; border:1px solid #1f2f52; border-radius:8px; white-space:nowrap; font-size:12px; pointer-events:none; opacity:0; transition:opacity .12s}
+    .star:hover .tooltip{opacity:1}
+    .line{position:absolute; height:1px; background:linear-gradient(90deg, rgba(130,170,255,.0), rgba(130,170,255,.5), rgba(130,170,255,.0)); opacity:.5}
+
+    /* System view overlay */
+    .system{position:absolute; inset:0; display:none; place-items:center;}
+    .sys-wrap{position:relative; width:min(1400px, 96vw); height:min(780px, 78vh); border:1px solid #13203a; background:radial-gradient(1000px 800px at 50% 40%, #0b1223, #060910); border-radius:18px; overflow:hidden; box-shadow:0 10px 50px rgba(0,0,0,.5)}
+    .sys-top{position:absolute; inset:0 0 auto 0; display:flex; gap:10px; align-items:center; padding:10px 12px; background:linear-gradient(to bottom, rgba(8,12,22,.7), rgba(8,12,22,0)); border-bottom:1px solid #0e1a30; z-index:5}
+    .sys-title{font-weight:700}
+    .sys-close{margin-left:auto}
+
+    .scene{position:absolute; inset:0}
+    .orbit{position:absolute; border:1px dashed rgba(120,160,255,.25); border-radius:50%; left:50%; top:50%; transform:translate(-50%,-50%)}
+    .body{position:absolute; border-radius:50%; box-shadow:0 0 10px rgba(180,200,255,.4)}
+    .body .tooltip{transform:translate(-50%, calc(-100% - 14px))}
+
+    .legend{position:absolute; right:12px; bottom:12px; display:flex; gap:8px; flex-wrap:wrap; max-width:40ch}
+
+    /* Small helpers */
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:12px}
+    .small{font-size:12px; color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="logo">✨ Galaxy Lobby</div>
+      <div class="small">100 systems · hover for type · click to open</div>
+      <div class="seed">
+        <span>Seed:</span>
+        <input id="seedInput" placeholder="random" />
+        <button class="btn" id="regenBtn" title="Regenerate with seed">Regenerate</button>
+      </div>
+    </div>
+
+    <div class="map">
+      <div id="space"></div>
+      <div class="system" id="systemView" aria-hidden="true">
+        <div class="sys-wrap">
+          <div class="sys-top">
+            <div class="sys-title" id="sysTitle">System</div>
+            <button class="btn sys-close" id="closeSystem">Back to Lobby</button>
+          </div>
+          <div class="scene" id="scene"></div>
+          <div class="legend small">
+            <span class="pill">Hover stars/planets for details</span>
+            <span class="pill">Sizes are unique</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="sidebar">
+      <h2>Systems</h2>
+      <div class="search"><input id="search" placeholder="Search by name or type…" /></div>
+      <div id="list" class="list"></div>
+    </aside>
+  </div>
+
+  <script>
+  // ---------- Tiny PRNG (seeded) ----------
+  function mulberry32(a){return function(){var t = a += 0x6D2B79F5; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296;}}
+  function hashStr(s){let h=2166136261>>>0; for(let i=0;i<s.length;i++){h^=s.charCodeAt(i); h=Math.imul(h, 16777619)} return h>>>0}
+  const rand = (rng,min=0,max=1)=> min + (max-min)*rng();
+  const choice = (rng,arr)=> arr[Math.floor(rng()*arr.length)];
+
+  // ---------- Data vocab ----------
+  const STAR_TYPES = [
+    {t:"Red Dwarf", w:45, size:[0.3,0.7], heat:[2400, 3600]},
+    {t:"Orange Dwarf", w:20, size:[0.7,0.95], heat:[3700, 5200]},
+    {t:"Yellow Dwarf", w:15, size:[0.95,1.15], heat:[5200, 6000]},
+    {t:"Blue Star", w:3, size:[1.4,3.5], heat:[10000, 30000]},
+    {t:"Red Giant", w:6, size:[8, 60], heat:[3000, 5000]},
+    {t:"Red Supergiant", w:2, size:[100, 700], heat:[3000, 4500]},
+    {t:"Hypergiant", w:0.5, size:[300, 1200], heat:[3500, 20000]},
+    {t:"White Dwarf", w:3, size:[0.009, 0.02], heat:[8000, 30000]},
+    {t:"Neutron Star", w:0.5, size:[0.00015, 0.0003], heat:[600000, 1200000]},
+    {t:"Black Hole", w:1.0, size:[3, 10000], heat:[0,0]},
+    {t:"Binary System", w:3, size:[0.7,2.5], heat:[3000, 10000]},
+    {t:"Binary Black holes", w:0.5, size:[30, 1000000], heat:[0,0]},
+  ];
+  const TYPE_MAP = Object.fromEntries(STAR_TYPES.map(s=>[s.t,s]));
+
+  const PLANET_TYPES = [
+    {t:"Terrestrial", mats:["silicates","iron","nickel","basalt","granite"], facts:["thin atmosphere","active plate tectonics","impact craters visible","auroras at poles"]},
+    {t:"Gas giant", mats:["hydrogen","helium","ammonia","methane"], facts:["faint rings of dust","storms the size of continents","powerful magnetic field"]},
+    {t:"Ice giant", mats:["water ice","ammonia ice","methane ice"], facts:["sideways axial tilt","diamond rain theorized"]},
+    {t:"Ocean", mats:["liquid water","salts","silicates"], facts:["global ocean with no continents","megatsunami scars on ridges"]},
+    {t:"Desert", mats:["silica sand","iron oxides","sulfates"], facts:["towering dust devils","polar cold traps of CO₂ ice"]},
+    {t:"Lava", mats:["basaltic lava","sulfur","volatiles"], facts:["rivers of molten rock","volcanic lightning"]},
+    {t:"Carbon", mats:["carbon","graphite","diamond"], facts:["diamond crust outcrops","hydrocarbon seas"]},
+    {t:"Habitable", mats:["water","nitrogen","oxygen","silicates","iron"], facts:["blooming with red flowers and green blobs","migratory bioluminescent algae"]},
+  ];
+
+  // Which star types can host planets (per spec: only "normal" ones). We'll treat dwarfs & giants as eligible; compact and BHs are not.
+  const PLANET_OK = new Set(["Red Dwarf","Orange Dwarf","Yellow Dwarf","Blue Star","Red Giant","Red Supergiant","Hypergiant","Binary System"]);
+
+  // Weighted pick helper (with optional single cap for Binary Black holes)
+  function makeTypePicker(rng){
+    // Normalize weights and enforce at most one Binary Black holes
+    let pool = STAR_TYPES.flatMap(s=>Array(Math.max(1,Math.round(s.w*10))).fill(s.t));
+    return ()=> choice(rng, pool);
+  }
+
+  // Name generator
+  function makeNameGen(rng){
+    const prefixes = ["XK","HD","HIP","Kepler","K2","GL","WASP","SDSS","PSR","TON","TRAPPIST","YZ","LHS","HR","BD","OGLE","Gaia"];
+    const greek = ["Alpha","Beta","Gamma","Delta","Epsilon","Zeta","Eta","Theta","Iota","Kappa","Lambda","Mu","Nu","Xi","Omicron","Pi","Rho","Sigma","Tau","Upsilon","Phi","Chi","Psi","Omega"];
+    const syl = ["za","ri","on","ta","bel","can","dor","eus","fy","gor","hel","ion","kai","lor","mir","nor","ory","pra","qua","ryn","sol","tur","vyr","wyx","yor","zen"];
+    return ()=>{
+      if(rng()<0.45){ // catalog style
+        return `${choice(rng,prefixes)}-${Math.floor(rand(rng,100,9999))}`
+      } else if(rng()<0.75){ // greek + sector
+        return `${choice(rng,greek)} ${String.fromCharCode(65+Math.floor(rng()*26))}-${Math.floor(rand(rng,1,99))}`
+      } else { // invented
+        let s = choice(rng,syl)+choice(rng,syl);
+        if(rng()<0.5) s += choice(rng,syl);
+        return s[0].toUpperCase()+s.slice(1);
+      }
+    }
+  }
+
+  // Galaxy generation -------------------------------------------------
+  function generateGalaxy(seedStr){
+    const seed = seedStr? hashStr(seedStr) : Math.floor(Math.random()*2**31);
+    const rng = mulberry32(seed);
+    const pickType = makeTypePicker(rng);
+    const nameGen = makeNameGen(rng);
+
+    const W = document.querySelector('#space').clientWidth;
+    const H = document.querySelector('#space').clientHeight;
+    const CENTER = {x: W/2, y: H/2};
+
+    const systems = [];
+
+    // Uniqueness of star sizes across all (for realism): track used radii
+    const usedR = new Set();
+    const uniqueRadius = (r)=>{
+      // jitter until unique within 0.2px
+      let v=r; let tries=0; while(usedR.has(v.toFixed(2)) && tries<50){ v += rand(rng,-0.2,0.2); tries++ } usedR.add(v.toFixed(2)); return Math.max(1,v);
+    }
+
+    // Poisson-like placement with min distance; sparser near BHs
+    const MIN_DIST = 46; // px
+
+    // We'll place exactly 100, with constraints: only one Binary Black holes, and it should be far from center
+    let hasDoubleBH = false;
+
+    const placed = [];
+    let attempts=0;
+    while(placed.length<100 && attempts<20000){
+      attempts++;
+      let t = pickType();
+      if(t==="Binary Black holes"){
+        if(hasDoubleBH) { t = "Black Hole"; } // fallback
+      }
+
+      // choose position: bias toward center except for (Binary Black holes) which should be outer
+      let x,y; let ok=false; let tries=0;
+      while(!ok && tries<400){
+        tries++;
+        // polar sampling
+        let angle = rand(rng,0,Math.PI*2);
+        let r = (t==="Binary Black holes") ? rand(rng, Math.min(W,H)*0.36, Math.min(W,H)*0.48)
+                                            : Math.pow(rng(), 0.6) * Math.min(W,H)*0.45; // clustered a bit to center
+        x = CENTER.x + r*Math.cos(angle);
+        y = CENTER.y + r*Math.sin(angle);
+
+        // boundaries
+        if(x<24||y<24||x>W-24||y>H-24) continue;
+
+        ok = true;
+        for(const p of placed){
+          const dx = x-p.x, dy=y-p.y; const d=Math.hypot(dx,dy);
+          // Larger void around BHs
+          const voidA = (t.includes("Black hole")||t==="Neutron Star")? 86 : MIN_DIST;
+          const voidB = (p.type.includes("Black hole")||p.type==="Neutron Star")? 86 : MIN_DIST;
+          if(d < Math.max(voidA, voidB)) { ok=false; break; }
+        }
+      }
+      if(!ok) continue;
+
+      // Physical attributes
+      const base = TYPE_MAP[t];
+      let starCount = (t==="Binary System") ? 2 : (t==="Binary Black holes" ? 2 : 1);
+      const sizeSolar = rand(rng, base.size[0], base.size[1]);
+      const heatK = Math.round(rand(rng, base.heat[0], base.heat[1]));
+
+      // visible dot radius on lobby (not physical): scale by type but keep within 3..6 px (not too small)
+      let dotR = 3 + 3 * Math.pow(Math.min(sizeSolar/3, 1), 0.5);
+      dotR = uniqueRadius(dotR);
+
+      // Planets only for allowed types (and not for compact objects)
+      let planetCount = 0; let planets=[];
+      const canHavePlanets = PLANET_OK.has(t) && !t.includes("Black hole");
+      if(canHavePlanets){
+        // Coherent counts: red dwarfs fewer; giants modest; yellow/orange varied; blue rare planets
+        let maxP = 8, minP=0;
+        if(t==="Red Dwarf") {maxP=4}
+        if(t==="Blue Star") {maxP=3}
+        if(t.includes("Giant") && !t.includes("Super")) {maxP=6}
+        if(t.includes("Super")||t==="Hypergiant"){maxP=4}
+        planetCount = Math.floor(rand(rng,minP, maxP+1));
+        planets = Array.from({length: planetCount}, (_,i)=> makePlanet(rng, i));
+      }
+
+      const sys = {
+        id: placed.length,
+        name: nameGen(),
+        type:t,
+        starCount,
+        heatK,
+        sizeSolar: +sizeSolar.toFixed(3),
+        dotR: Math.round(dotR),
+        x: Math.round(x), y: Math.round(y),
+        planets,
+      };
+      if(t==="Binary Black holes") hasDoubleBH = true;
+      placed.push(sys);
+    }
+
+    // Guarantee only one double BH
+    if(placed.filter(s=>s.type==="Binary Black holes").length>1){
+      let extra = placed.findIndex((s,i)=> s.type==="Binary Black holes" && i!==placed.findIndex(ss=>ss.type==="Binary Black holes"));
+      if(extra>-1) placed[extra].type = "Black Hole";
+    }
+
+    return {seed, systems:placed, size:{W,H}};
+  }
+
+  // Create planets with coherent materials and facts
+  function makePlanet(rng, idx){
+    // Weighted planet type by frequency around "normal" stars
+    const pool = [
+      ...Array(6).fill("Terrestrial"),
+      ...Array(3).fill("Desert"),
+      ...Array(3).fill("Ocean"),
+      ...Array(2).fill("Gas giant"),
+      ...Array(2).fill("Ice giant"),
+      ...Array(1).fill("Lava"),
+      ...Array(1).fill("Carbon"),
+      ...Array(1).fill("Habitable"),
+    ];
+    const type = choice(rng,pool);
+
+    // Size bands (Earth=1). Ensure no duplicates later by orbit radius; in a single system, tiny jitter ensures uniqueness of rendered radius
+    const sizeByType = {
+      "Terrestrial":[0.3,1.9],
+      "Desert":[0.4,1.4],
+      "Ocean":[0.7,2.2],
+      "Lava":[0.3,1.2],
+      "Carbon":[0.5,1.6],
+      "Habitable":[0.8,1.3],
+      "Gas giant":[6,16],
+      "Ice giant":[3,6],
+    };
+    const size = +rand(rng, ...sizeByType[type]).toFixed(2);
+
+    const vocab = PLANET_TYPES.find(p=>p.t===type);
+    const matCount = 2 + Math.floor(rand(rng,0,3));
+    const materials = shuffle(rng, vocab.mats).slice(0, matCount);
+    const fact = choice(rng, vocab.facts);
+
+    return {
+      name: planetName(rng),
+      type,
+      sizeEarth: size,
+      materials,
+      fact
+    };
+  }
+
+  function shuffle(rng, arr){const a=arr.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a}
+
+  function planetName(rng){
+    const base = ["Aeg","Bel","Cal","Dor","Eos","Fyr","Gai","Hel","Ion","Jor","Kry","Lor","Mor","Nor","Oth","Pra","Qua","Ryn","Sol","Tor","Urn","Vyr","Wes","Xyl","Yor","Zen"]; 
+    const suf = ["a","ae","ar","ia","ion","is","on","or","os","um","une","ara","ora"];
+    return choice(rng,base) + choice(rng,suf) + (rng()<0.2?"-"+Math.floor(rand(rng,1,9)):"");
+  }
+
+  // ---------- Rendering: Lobby ----------
+  const space = document.getElementById('space');
+  const list = document.getElementById('list');
+  const search = document.getElementById('search');
+  const seedInput = document.getElementById('seedInput');
+  const regenBtn = document.getElementById('regenBtn');
+
+  let GALAXY=null;
+
+  function renderLobby(){
+    space.innerHTML='';
+    list.innerHTML='';
+
+    GALAXY.systems.forEach(sys=>{
+      // Star dot
+      const el = document.createElement('div');
+      el.className='star';
+      el.style.left = sys.x+"px";
+      el.style.top = sys.y+"px";
+      el.style.width = el.style.height = (sys.dotR*2)+"px";
+      el.style.background = starColor(sys.type);
+      el.title = `${sys.name} — ${sys.type}`;
+      el.addEventListener('click', ()=> openSystem(sys.id));
+
+      const tip = document.createElement('div');
+      tip.className='tooltip';
+      tip.textContent = `${sys.name} · ${sys.type}`;
+      el.appendChild(tip);
+
+      space.appendChild(el);
+
+      // Optional faint radial lines near center for style
+      if(sys.id%15===0){
+        const ln = document.createElement('div'); ln.className='line';
+        ln.style.left=Math.max(0,sys.x-80)+"px"; ln.style.top=sys.y+"px"; ln.style.width=160+"px"; ln.style.opacity=.2; space.appendChild(ln);
+      }
+
+      // Sidebar card
+      const card = document.createElement('div');
+      card.className='card';
+      card.dataset.name = sys.name.toLowerCase();
+      card.dataset.type = sys.type.toLowerCase();
+      card.innerHTML = `
+        <div class="name">${sys.name}</div>
+        <div class="kv">
+          <div><span class="small">Type</span><div>${sys.type}</div></div>
+          <div><span class="small">Star(s)</span><div>${sys.starCount}</div></div>
+          <div><span class="small">Heat (K)</span><div class="mono">${sys.heatK.toLocaleString()}</div></div>
+          <div><span class="small">Size (R☉)</span><div class="mono">${sys.sizeSolar}</div></div>
+          <div><span class="small">Planets</span><div>${sys.planets.length}</div></div>
+        </div>
+        <div class="planets">${sys.planets.map(p=>`<span class="pill" title="${p.materials.join(', ')}">${p.name} · ${p.type}</span>`).join('')}</div>
+        <div style="margin-top:8px"><button class="btn" data-open="${sys.id}">Open system</button></div>
+      `;
+      card.querySelector('button').addEventListener('click', ()=> openSystem(sys.id));
+      list.appendChild(card);
+    });
+  }
+
+  function starColor(type){
+    if(type.includes('Black')) return 'radial-gradient(circle at 40% 40%, #1a2233, #020308 70%)';
+    if(type.includes('Neutron')) return 'radial-gradient(circle at 40% 40%, #b7d0ff, #587fff)';
+    if(type.includes('White Dwarf')) return 'radial-gradient(circle at 40% 40%, #f8fbff, #a9c0ff)';
+    if(type.includes('Blue')) return 'radial-gradient(circle at 40% 40%, #bcd6ff, #3a66ff)';
+    if(type.includes('Yellow')) return 'radial-gradient(circle at 40% 40%, #fff2b0, #e0a91a)';
+    if(type.includes('Orange')) return 'radial-gradient(circle at 40% 40%, #ffd9a6, #ff8d2a)';
+    if(type.includes('Giant')) return 'radial-gradient(circle at 40% 40%, #ffd1c0, #ff4b2f)';
+    return 'radial-gradient(circle at 40% 40%, #ffd5d5, #ff7a5e)'; // red dwarf default
+  }
+
+  // ---------- System View ----------
+  const systemView = document.getElementById('systemView');
+  const scene = document.getElementById('scene');
+  const closeBtn = document.getElementById('closeSystem');
+  const sysTitle = document.getElementById('sysTitle');
+
+  function openSystem(id){
+    location.hash = `#system-${id}`; // deep link
+  }
+  function closeSystem(){
+    location.hash = '';
+  }
+  closeBtn.addEventListener('click', closeSystem);
+
+  function renderSystem(id){
+    const sys = GALAXY.systems.find(s=>s.id===id);
+    if(!sys) return;
+    sysTitle.textContent = `${sys.name} — ${sys.type}`;
+    systemView.style.display='grid';
+    systemView.setAttribute('aria-hidden','false');
+    scene.innerHTML='';
+
+    const W = document.querySelector('.sys-wrap').clientWidth;
+    const H = document.querySelector('.sys-wrap').clientHeight;
+    const cx=W/2, cy=H/2 + 10;
+
+    // Draw star(s)
+    const starSizes = [];
+    const putBody = (x,y,r,color,label)=>{
+      const b=document.createElement('div'); b.className='body'; b.style.left=(x-r)+"px"; b.style.top=(y-r)+"px"; b.style.width=b.style.height=(r*2)+"px"; b.style.background=color; b.style.border='1px solid rgba(255,255,255,.12)';
+      const tip=document.createElement('div'); tip.className='tooltip'; tip.innerHTML = label; b.appendChild(tip); scene.appendChild(b);
+    }
+
+    // Map physical size to pixels (log scale so giants/compact both visible)
+    function starPx(sizeRsun){
+      // 1 R☉ ~ 18px, but compress with log for huge giants
+      const px = 18 * Math.log10(2 + sizeRsun);
+      return Math.max(8, Math.min(px, 180)); // cap for visibility
+    }
+
+    if(sys.type==="Binary System"){
+      // two main-sequence-ish stars orbiting barycenter
+      const r1 = starPx(sys.sizeSolar);
+      const r2 = starPx(sys.sizeSolar*rand(mulberry32(sys.id+123),0.7,1.3));
+      starSizes.push(r1,r2);
+      putBody(cx-60, cy, r1, starColor("Yellow Dwarf"), `${sys.name} A<br><span class='small'>Type: Binary System<br>Heat: ${sys.heatK} K<br>Size: ${sys.sizeSolar} R☉</span>`);
+      putBody(cx+60, cy, r2, starColor("Orange Dwarf"), `${sys.name} B<br><span class='small'>Type: Binary System</span>`);
+    } else if(sys.type==="Binary Black holes"){
+      const rA = starPx(Math.max(5, Math.cbrt(sys.sizeSolar))); // visual only
+      const rB = starPx(Math.max(4, Math.cbrt(sys.sizeSolar*0.7)));
+      starSizes.push(rA,rB);
+      putBody(cx-70, cy, rA, starColor('Black hole'), `${sys.name} A<br><span class='small'>Type: Binary Black holes<br>Mass scale: ${Math.round(sys.sizeSolar)} M☉</span>`);
+      putBody(cx+70, cy, rB, starColor('Black hole'), `${sys.name} B<br><span class='small'>Type: Binary Black holes</span>`);
+    } else {
+      const r = starPx(sys.sizeSolar);
+      starSizes.push(r);
+      putBody(cx, cy, r, starColor(sys.type), `${sys.name}<br><span class='small'>Type: ${sys.type}<br>Heat: ${sys.heatK} K<br>Size: ${sys.sizeSolar} R☉</span>`);
+    }
+
+    // Orbits & planets
+    const rng = mulberry32(GALAXY.seed ^ (sys.id*2654435761>>>0));
+    let baseOrbit = Math.max(...starSizes) + 30;
+    const orbitGap = 26;
+    sys.planets.forEach((p,i)=>{
+      const a = baseOrbit + i*orbitGap;
+      const orbit = document.createElement('div'); orbit.className='orbit'; orbit.style.width=orbit.style.height=(a*2)+"px"; orbit.style.left=cx+"px"; orbit.style.top=cy+"px"; scene.appendChild(orbit);
+
+      // planet size in px (Earth ~ 6px)
+      const pr = Math.max(4, Math.min(6*p.sizeEarth, 22));
+      const speed = rand(rng, 16, 48) + i*2; // seconds
+
+      const planet = document.createElement('div'); planet.className='body'; planet.style.width=planet.style.height=(pr*2)+"px"; planet.style.background=planetColor(p.type);
+      // place on orbit with CSS animation
+      planet.style.left=(cx + a - pr)+"px"; planet.style.top=(cy - pr)+"px"; // start at rightmost point
+      planet.style.border='1px solid rgba(255,255,255,.08)';
+      planet.style.boxShadow='0 0 10px rgba(150,200,255,.25)';
+      const tip=document.createElement('div'); tip.className='tooltip'; tip.innerHTML = `${p.name}<br><span class='small'>${p.type}; size ${p.sizeEarth} ⊕<br>Materials: ${p.materials.join(', ')}<br>Fact: ${p.fact}</span>`; planet.appendChild(tip);
+
+      // animate around center
+      planet.animate([
+        { transform:`rotate(0deg) translate(${a}px) rotate(0deg)` },
+        { transform:`rotate(360deg) translate(${a}px) rotate(-360deg)` }
+      ], { duration: speed*1000, iterations: Infinity, easing: 'linear', composite:'replace' });
+      // wrapper to center the transform
+      const wrapper = document.createElement('div'); wrapper.style.position='absolute'; wrapper.style.left=(cx - a)+"px"; wrapper.style.top=(cy - a)+"px"; wrapper.style.width=wrapper.style.height=(a*2)+"px"; wrapper.style.borderRadius='50%'; wrapper.appendChild(planet); scene.appendChild(wrapper);
+    });
+  }
+
+  function planetColor(type){
+    switch(type){
+      case 'Gas giant': return 'radial-gradient(circle at 40% 35%, #f0f5ff, #4a6fd1)';
+      case 'Ice giant': return 'radial-gradient(circle at 40% 35%, #e8fbff, #5db7e8)';
+      case 'Ocean': return 'radial-gradient(circle at 40% 35%, #cbe8ff, #0577bd)';
+      case 'Desert': return 'radial-gradient(circle at 40% 35%, #ffecc7, #d9a24a)';
+      case 'Lava': return 'radial-gradient(circle at 40% 35%, #ffd4b3, #ff3b1a)';
+      case 'Carbon': return 'radial-gradient(circle at 40% 35%, #cdd3da, #2b2f36)';
+      case 'Habitable': return 'radial-gradient(circle at 40% 35%, #e7ffe6, #2a7f3b)';
+      default: return 'radial-gradient(circle at 40% 35%, #f0f0f0, #6f6f6f)';
+    }
+  }
+
+  // ---------- Hash routing ----------
+  window.addEventListener('hashchange', ()=>{
+    const m = location.hash.match(/#system-(\d+)/);
+    if(m){ renderSystem(+m[1]); }
+    systemView.style.display = m? 'grid':'none';
+    systemView.setAttribute('aria-hidden', m? 'false':'true');
+  });
+
+  // ---------- Search filter ----------
+  search.addEventListener('input', ()=>{
+    const q = search.value.trim().toLowerCase();
+    Array.from(list.children).forEach(card=>{
+      const hit = card.dataset.name.includes(q) || card.dataset.type.includes(q);
+      card.style.display = hit? 'block':'none';
+    });
+  });
+
+  // ---------- Bootstrap ----------
+  function regenerate(seedStr){
+    GALAXY = generateGalaxy(seedStr);
+    seedInput.value = seedStr || GALAXY.seed.toString(36);
+    renderLobby();
+    if(location.hash) { // keep deep link consistent with new seed by clearing
+      location.hash = '';
+    }
+  }
+  window.addEventListener('resize', ()=> regenerate(seedInput.value));
+  regenBtn.addEventListener('click', ()=> regenerate(seedInput.value||undefined));
+
+  // First run
+  regenerate(new URLSearchParams(location.search).get('seed') || undefined);
+  
+  </script>
+</body>
+</html>
